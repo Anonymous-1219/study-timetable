@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1330">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Study Timetable</title>
+<style>
+:root{
+  --bg:#0e1330; --panel:#171d44; --panel2:#1f2757; --line:#2b3470;
+  --text:#f3f1ea; --muted:#9aa3d1; --amber:#ffb938; --teal:#3ddbd0; --danger:#ff6b81;
+  --serif:Georgia,"Times New Roman",serif; --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+body{min-height:100vh;padding:env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 8px}
+h1{font-family:var(--serif);font-size:26px;margin:0;font-weight:700;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+.iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--text);width:44px;height:44px;border-radius:14px;font-size:20px;display:grid;place-items:center;cursor:pointer}
+.iconbtn.on{border-color:var(--teal);color:var(--teal)}
+.hdr-actions{display:flex;gap:8px}
+
+.next{margin:12px 0 6px;padding:16px 18px;border-radius:22px;background:radial-gradient(120% 140% at 85% 0%,rgba(255,185,56,.28),rgba(255,185,56,0) 55%),var(--panel);border:1px solid var(--line)}
+.next small{color:var(--muted);font-size:12.5px}
+.next .nm{font-family:var(--serif);font-size:24px;margin:4px 0 2px}
+.next .cd{font-size:15px;color:var(--amber);font-weight:600}
+.next.empty .nm{font-size:18px;color:var(--muted)}
+
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:14px 0}
+.day{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:14px;padding:10px 0 8px;text-align:center;font-size:13px;cursor:pointer;position:relative}
+.day b{display:block;font-size:15px;color:var(--text);margin-bottom:2px}
+.day.sel{background:var(--amber);color:#2a1c00;border-color:var(--amber)}
+.day.sel b{color:#2a1c00}
+.day .cnt{display:block;font-size:11px;min-height:13px}
+.day.today:not(.sel)::after{content:"";position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--teal)}
+
+.dtitle{font-family:var(--serif);font-size:19px;margin:18px 2px 10px}
+.card{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:10px;cursor:pointer}
+.card .bar{width:5px;border-radius:5px;flex:none}
+.card .t{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .s{font-family:var(--serif);font-size:19px;margin:2px 0}
+.card .n{font-size:13px;color:var(--muted)}
+.card.off{opacity:.55}
+.card .bell{margin-left:auto;font-size:15px;align-self:flex-start;color:var(--teal)}
+.card.past{opacity:.5}
+.empty-state{text-align:center;color:var(--muted);padding:34px 10px;border:1px dashed var(--line);border-radius:18px}
+
+.fab{position:fixed;right:max(18px,calc(50% - 262px));bottom:calc(22px + env(safe-area-inset-bottom));background:var(--amber);color:#2a1c00;border:0;border-radius:20px;padding:16px 22px;font-size:16px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer}
+
+.sheet-bg{position:fixed;inset:0;background:rgba(5,8,25,.7);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.sheet-bg.open{display:flex}
+.sheet{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--panel2);border-radius:26px 26px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));border:1px solid var(--line);animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.sheet h2{font-family:var(--serif);margin:0 0 14px;font-size:22px}
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+input[type=text],input[type=time],input[type=number],textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px;font-size:16px;font-family:inherit}
+textarea{min-height:64px;resize:vertical}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{flex:1;min-width:42px;text-align:center;padding:11px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:14px;cursor:pointer}
+.chip.on{background:var(--teal);color:#032a27;border-color:var(--teal);font-weight:700}
+.swatches{display:flex;gap:10px}
+.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}
+.sw.on{border-color:#fff}
+.chk{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:15px;color:var(--text)}
+.chk input{width:20px;height:20px;accent-color:var(--teal)}
+.btns{display:flex;gap:10px;margin-top:22px}
+.btn{flex:1;padding:15px;border-radius:16px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--amber);color:#2a1c00;border-color:var(--amber)}
+.btn.del{color:var(--danger);flex:0 0 auto;padding:15px 18px}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.setrow:last-of-type{border-bottom:0}
+.setrow p{margin:0;font-size:15px}.setrow small{color:var(--muted);display:block;margin-top:3px;font-size:12.5px;line-height:1.35}
+.setrow .btn{flex:0 0 auto;padding:10px 14px;font-size:14px}
+.setrow input[type=number]{width:74px;padding:10px;text-align:center}
+
+#alarm{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:radial-gradient(90% 60% at 50% 30%,rgba(255,185,56,.4),rgba(14,19,48,.98) 70%)}
+#alarm.open{display:flex}
+#alarm .ring{font-size:64px;animation:shake .5s infinite}
+@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+#alarm h2{font-family:var(--serif);font-size:34px;margin:14px 0 6px}
+#alarm p{color:var(--amber);font-size:18px;margin:0 0 6px}
+#alarm .tm{color:var(--muted);margin-bottom:34px}
+#alarm .btn{flex:none;min-width:220px;font-size:18px;padding:18px}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:12px 18px;border-radius:14px;font-size:14px;z-index:60;display:none;max-width:90%}
+@media (prefers-reduced-motion:reduce){.sheet,#alarm .ring{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Study Timetable</h1>
+      <div class="sub" id="today"></div>
+    </div>
+    <div class="hdr-actions">
+      <button class="iconbtn" id="bellBtn" aria-label="Reminders">🔔</button>
+      <button class="iconbtn" id="setBtn" aria-label="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <div class="next" id="next"></div>
+  <div class="days" id="days"></div>
+  <div class="dtitle" id="dtitle"></div>
+  <div id="list"></div>
+</div>
+
+<button class="fab" id="addBtn">+ Add subject</button>
+
+<!-- Add / edit sheet -->
+<div class="sheet-bg" id="sheetBg">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h2 id="sheetTitle">Add subject</h2>
+    <label for="fSubject">Subject</label>
+    <input type="text" id="fSubject" placeholder="e.g. Organic Chemistry" autocomplete="off">
+    <label>Days</label>
+    <div class="chips" id="fDays"></div>
+    <div class="row">
+      <div><label for="fStart">Start</label><input type="time" id="fStart" value="18:00"></div>
+      <div><label for="fEnd">End</label><input type="time" id="fEnd" value="19:00"></div>
+    </div>
+    <label for="fNote">Note (optional)</label>
+    <textarea id="fNote" placeholder="Chapter, topic or past questions to cover"></textarea>
+    <label>Colour</label>
+    <div class="swatches" id="fColors"></div>
+    <label class="chk"><input type="checkbox" id="fRemind" checked> Remind me for this subject</label>
+    <div class="btns">
+      <button class="btn del" id="delBtn" style="display:none">Delete</button>
+      <button class="btn" id="cancelBtn">Cancel</button>
+      <button class="btn pri" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="sheet-bg" id="setBg">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h2>Reminders and backup</h2>
+    <div class="setrow">
+      <p>Phone notifications<small id="permTxt"></small></p>
+      <button class="btn" id="permBtn">Enable</button>
+    </div>
+    <div class="setrow">
+      <p>Alarm sound<small>Plays when a reminder fires while the app is open.</small></p>
+      <button class="btn" id="testBtn">Test</button>
+    </div>
+    <div class="setrow">
+      <p>Early reminder (minutes)<small>Alert before each session starts. Set 0 to turn it off.</small></p>
+      <input type="number" id="leadIn" min="0" max="120" value="10">
+    </div>
+    <div class="setrow">
+      <p>Add to phone calendar<small>Downloads a weekly repeating calendar file with alarms 10 mins before and at start. Open it and your phone calendar will ring even when this app is closed.</small></p>
+      <button class="btn" id="icsBtn">Export</button>
+    </div>
+    <div class="setrow">
+      <p>Clear all subjects<small>Removes every session from this device.</small></p>
+      <button class="btn" id="clearBtn" style="color:var(--danger)">Clear</button>
+    </div>
+    <div class="btns"><button class="btn pri" id="setClose">Done</button></div>
+  </div>
+</div>
+
+<!-- Full screen alarm -->
+<div id="alarm">
+  <div class="ring">⏰</div>
+  <h2 id="alSubject"></h2>
+  <p id="alMsg"></p>
+  <div class="tm" id="alTime"></div>
+  <button class="btn pri" id="alStop">Stop alarm</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var FULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var COLORS=['#ffb938','#3ddbd0','#ff7c9c','#9d8cff','#7cd36b','#ff8a4c'];
+var $=function(id){return document.getElementById(id)};
+
+function load(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+var sessions=load('st_sessions',[]);
+var settings=load('st_settings',{lead:10});
+var fired=load('st_fired',{});
+var selDay=new Date().getDay();
+var editId=null, formDays=[], formColor=COLORS[0];
+var swReg=null;
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function pad(n){return String(n).padStart(2,'0')}
+function fmt12(hm){var p=hm.split(':'),h=+p[0],m=p[1],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+m+' '+ap}
+function toMin(hm){var p=hm.split(':');return +p[0]*60+ +p[1]}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function toast(msg){var t=$('toast');t.textContent=msg;t.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(function(){t.style.display='none'},2600)}
+function save(){store('st_sessions',sessions)}
+
+/* ---------- rendering ---------- */
+function renderDays(){
+  var td=new Date().getDay(), h='';
+  for(var i=0;i<7;i++){
+    var c=sessions.filter(function(s){return s.days.indexOf(i)>-1}).length;
+    h+='<button class="day'+(i===selDay?' sel':'')+(i===td?' today':'')+'" data-d="'+i+'"><b>'+DAYS[i]+'</b><span class="cnt">'+(c?c+(c>1?' subjects':' subject'):'')+'</span></button>';
+  }
+  $('days').innerHTML=h;
+}
+function renderList(){
+  var list=sessions.filter(function(s){return s.days.indexOf(selDay)>-1}).sort(function(a,b){return toMin(a.start)-toMin(b.start)});
+  $('dtitle').textContent=FULL[selDay]+(selDay===new Date().getDay()?' (today)':'');
+  if(!list.length){$('list').innerHTML='<div class="empty-state">Nothing planned for '+FULL[selDay]+'.<br>Tap “Add subject” to plan your reading.</div>';return}
+  var now=new Date(), nowMin=now.getHours()*60+now.getMinutes(), isToday=selDay===now.getDay();
+  $('list').innerHTML=list.map(function(s){
+    var past=isToday&&toMin(s.end)<nowMin;
+    return '<div class="card'+(past?' past':'')+'" data-id="'+s.id+'"><div class="bar" style="background:'+esc(s.color)+'"></div><div><div class="t">'+fmt12(s.start)+' – '+fmt12(s.end)+'</div><div class="s">'+esc(s.subject)+'</div>'+(s.note?'<div class="n">'+esc(s.note)+'</div>':'')+'</div><div class="bell">'+(s.remind===false?'🔕':'🔔')+'</div></div>';
+  }).join('');
+}
+function nextOccurrence(){
+  var now=new Date(), best=null;
+  sessions.forEach(function(s){
+    s.days.forEach(function(d){
+      var t=new Date(now);t.setHours(0,0,0,0);
+      var diff=(d-now.getDay()+7)%7;t.setDate(t.getDate()+diff);
+      var p=s.start.split(':');t.setHours(+p[0],+p[1],0,0);
+      if(t<=now)t.setDate(t.getDate()+7);
+      if(!best||t<best.t)best={t:t,s:s};
+    });
+  });
+  return best;
+}
+function renderNext(){
+  var n=nextOccurrence(), el=$('next');
+  if(!n){el.className='next empty';el.innerHTML='<small>Next up</small><div class="nm">No sessions yet. Add your first subject.</div>';return}
+  var ms=n.t-new Date(), mins=Math.round(ms/60000), txt;
+  if(mins<60)txt='in '+mins+' min';
+  else if(mins<1440)txt='in '+Math.floor(mins/60)+'h '+(mins%60)+'m';
+  else txt=FULL[n.t.getDay()]+' at '+fmt12(n.s.start);
+  el.className='next';
+  el.innerHTML='<small>Next up</small><div class="nm">'+esc(n.s.subject)+'</div><div class="cd">'+txt+' · '+fmt12(n.s.start)+'</div>';
+}
+function render(){
+  var d=new Date();
+  $('today').textContent=FULL[d.getDay()]+', '+d.toLocaleDateString(undefined,{day:'numeric',month:'long'});
+  renderDays();renderList();renderNext();updateBell();
+}
+
+/* ---------- add / edit ---------- */
+function buildForm(){
+  $('fDays').innerHTML=DAYS.map(function(n,i){return '<div class="chip'+(formDays.indexOf(i)>-1?' on':'')+'" data-d="'+i+'">'+n+'</div>'}).join('');
+  $('fColors').innerHTML=COLORS.map(function(c){return '<div class="sw'+(c===formColor?' on':'')+'" data-c="'+c+'" style="background:'+c+'"></div>'}).join('');
+}
+function openSheet(id){
+  editId=id||null;
+  var s=id?sessions.filter(function(x){return x.id===id})[0]:null;
+  $('sheetTitle').textContent=s?'Edit subject':'Add subject';
+  $('fSubject').value=s?s.subject:'';
+  $('fStart').value=s?s.start:'18:00';
+  $('fEnd').value=s?s.end:'19:00';
+  $('fNote').value=s?(s.note||''):'';
+  $('fRemind').checked=s?s.remind!==false:true;
+  formDays=s?s.days.slice():[selDay];
+  formColor=s?s.color:COLORS[sessions.length%COLORS.length];
+  $('delBtn').style.display=s?'block':'none';
+  buildForm();
+  $('sheetBg').classList.add('open');
+}
+function closeSheet(){$('sheetBg').classList.remove('open')}
+function saveSession(){
+  var subj=$('fSubject').value.trim(), st=$('fStart').value, en=$('fEnd').value;
+  if(!subj){toast('Enter a subject name');return}
+  if(!formDays.length){toast('Pick at least one day');return}
+  if(!st||!en){toast('Set start and end time');return}
+  if(toMin(en)<=toMin(st)){toast('End time must be after start time');return}
+  var obj={id:editId||uid(),subject:subj,days:formDays.slice().sort(),start:st,end:en,note:$('fNote').value.trim(),color:formColor,remind:$('fRemind').checked};
+  if(editId){sessions=sessions.map(function(x){return x.id===editId?obj:x})}else{sessions.push(obj)}
+  save();closeSheet();render();
+  toast('Saved. Reminders set for '+obj.days.map(function(d){return DAYS[d]}).join(', '));
+  unlockAudio();
+  if('Notification' in window&&Notification.permission==='default')askPermission();
+}
+
+/* ---------- audio ---------- */
+var ac=null, alarmTimer=null, alarmStopT=null;
+function unlockAudio(){
+  try{
+    if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(C)ac=new C()}
+    if(ac&&ac.state==='suspended')ac.resume();
+  }catch(e){}
+}
+function beep(freq,t0,dur,type,vol){
+  if(!ac)return;
+  var o=ac.createOscillator(),g=ac.createGain();
+  o.type=type||'square';o.frequency.value=freq;
+  g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(vol||0.25,t0+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g);g.connect(ac.destination);o.start(t0);o.stop(t0+dur+0.02);
+}
+function ringOnce(kind){
+  unlockAudio();if(!ac)return;
+  var t=ac.currentTime+0.05;
+  if(kind==='pre'){
+    beep(660,t,0.18,'sine',0.3);beep(880,t+0.22,0.18,'sine',0.3);beep(1100,t+0.44,0.3,'sine',0.3);
+  }else{
+    for(var i=0;i<4;i++){beep(988,t+i*0.16,0.09,'square',0.28)}
+    for(var j=0;j<4;j++){beep(1318,t+0.8+j*0.16,0.09,'square',0.28)}
+  }
+}
+function startAlarm(kind){
+  stopAlarm();
+  ringOnce(kind);
+  var loops=0,max=kind==='pre'?3:45;
+  alarmTimer=setInterval(function(){
+    loops++;
+    if(loops>=max){stopAlarm();return}
+    ringOnce(kind);
+    if(navigator.vibrate)navigator.vibrate(kind==='pre'?[200,100,200]:[500,200,500,200,500]);
+  },kind==='pre'?1200:1700);
+  if(navigator.vibrate)navigator.vibrate(kind==='pre'?[200,100,200]:[500,200,500,200,500]);
+}
+function stopAlarm(){
+  if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null}
+  if(navigator.vibrate)navigator.vibrate(0);
+  $('alarm').classList.remove('open');
+}
+
+/* ---------- notifications ---------- */
+function permText(){
+  if(!('Notification' in window))return 'Not supported on this browser. Use the calendar export below.';
+  if(Notification.permission==='granted')return 'On. Alerts appear while the app is open or running in the background.';
+  if(Notification.permission==='denied')return 'Blocked. Allow notifications for this site in your browser settings.';
+  return 'Off. Tap Enable to allow alerts.';
+}
+function updateBell(){
+  var on='Notification' in window&&Notification.permission==='granted';
+  $('bellBtn').className='iconbtn'+(on?' on':'');
+  $('bellBtn').textContent=on?'🔔':'🔕';
+  $('permTxt').textContent=permText();
+  $('permBtn').style.display=(on?'none':'inline-block');
+}
+function askPermission(){
+  if(!('Notification' in window)){toast('Notifications not supported here');return}
+  Notification.requestPermission().then(function(){updateBell();if(Notification.permission==='granted')toast('Notifications enabled')})
+}
+function showNotification(title,body,tag,sticky){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  var opts={body:body,tag:tag,icon:'icon-192.png',badge:'icon-192.png',vibrate:[300,150,300,150,500],requireInteraction:!!sticky,renotify:true};
+  try{
+    if(swReg&&swReg.showNotification){swReg.showNotification(title,opts)}
+    else{new Notification(title,opts)}
+  }catch(e){try{new Notification(title,opts)}catch(e2){}}
+}
+
+/* ---------- scheduler ---------- */
+function fire(s,kind,startDate,key){
+  fired[key]=Date.now();store('st_fired',fired);
+  var lead=settings.lead;
+  var msg=kind==='pre'?'Starts in '+lead+' min':'Time to study. Starting now';
+  showNotification((kind==='pre'?'Get ready: ':'Study now: ')+s.subject,msg+' · '+fmt12(s.start)+' – '+fmt12(s.end),key,kind==='start');
+  $('alSubject').textContent=s.subject;
+  $('alMsg').textContent=msg;
+  $('alTime').textContent=fmt12(s.start)+' – '+fmt12(s.end);
+  $('alarm').classList.add('open');
+  startAlarm(kind);
+}
+function tick(){
+  var now=Date.now(), lead=Math.max(0,+settings.lead||0);
+  for(var off=0;off<=1;off++){
+    var d=new Date();d.setDate(d.getDate()+off);d.setHours(0,0,0,0);
+    sessions.forEach(function(s){
+      if(s.remind===false||s.days.indexOf(d.getDay())<0)return;
+      var p=s.start.split(':'),st=new Date(d);st.setHours(+p[0],+p[1],0,0);
+      var ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+      var checks=[{k:'start',t:st.getTime()}];
+      if(lead>0)checks.unshift({k:'pre',t:st.getTime()-lead*60000});
+      checks.forEach(function(c){
+        var key=s.id+'|'+ds+'|'+c.k;
+        if(now>=c.t&&now-c.t<5*60000&&!fired[key])fire(s,c.k,st,key);
+      });
+    });
+  }
+  var cut=now-3*86400000,ch=false;
+  for(var k in fired){if(fired[k]<cut){delete fired[k];ch=true}}
+  if(ch)store('st_fired',fired);
+  renderNext();
+}
+
+/* ---------- calendar export ---------- */
+function icsEsc(s){return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n')}
+function exportICS(){
+  if(!sessions.length){toast('Add a subject first');return}
+  var codes=['SU','MO','TU','WE','TH','FR','SA'];
+  var stamp=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  var lead=Math.max(0,+settings.lead||10);
+  function f(d,hm){var p=hm.split(':');return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(p[0])+pad(p[1])+'00'}
+  var L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mupel Designs//Study Timetable//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  sessions.forEach(function(s){
+    s.days.forEach(function(day){
+      var d=new Date();d.setHours(0,0,0,0);while(d.getDay()!==day)d.setDate(d.getDate()+1);
+      L.push('BEGIN:VEVENT','UID:'+s.id+'-'+day+'@study-timetable','DTSTAMP:'+stamp,
+        'DTSTART:'+f(d,s.start),'DTEND:'+f(d,s.end),'RRULE:FREQ=WEEKLY;BYDAY='+codes[day],
+        'SUMMARY:'+icsEsc('Study: '+s.subject));
+      if(s.note)L.push('DESCRIPTION:'+icsEsc(s.note));
+      if(s.remind!==false){
+        if(lead>0)L.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(s.subject+' starts in '+lead+' min'),'TRIGGER:-PT'+lead+'M','END:VALARM');
+        L.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc('Time to study '+s.subject),'TRIGGER:PT0M','END:VALARM');
+      }
+      L.push('END:VEVENT');
+    });
+  });
+  L.push('END:VCALENDAR');
+  var blob=new Blob([L.join('\r\n')],{type:'text/calendar'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='study-timetable.ics';
+  document.body.appendChild(a);a.click();a.remove();
+  toast('Open the downloaded file to add it to your calendar');
+}
+
+/* ---------- events ---------- */
+$('days').addEventListener('click',function(e){var b=e.target.closest('.day');if(!b)return;selDay=+b.dataset.d;renderDays();renderList()});
+$('list').addEventListener('click',function(e){var c=e.target.closest('.card');if(c)openSheet(c.dataset.id)});
+$('addBtn').addEventListener('click',function(){unlockAudio();openSheet()});
+$('cancelBtn').addEventListener('click',closeSheet);
+$('saveBtn').addEventListener('click',saveSession);
+$('delBtn').addEventListener('click',function(){
+  if(!confirm('Delete this subject?'))return;
+  sessions=sessions.filter(function(x){return x.id!==editId});save();closeSheet();render();
+});
+$('fDays').addEventListener('click',function(e){
+  var c=e.target.closest('.chip');if(!c)return;var d=+c.dataset.d,i=formDays.indexOf(d);
+  if(i>-1)formDays.splice(i,1);else formDays.push(d);buildForm();
+});
+$('fColors').addEventListener('click',function(e){var c=e.target.closest('.sw');if(!c)return;formColor=c.dataset.c;buildForm()});
+$('sheetBg').addEventListener('click',function(e){if(e.target===$('sheetBg'))closeSheet()});
+$('setBtn').addEventListener('click',function(){$('leadIn').value=settings.lead;updateBell();$('setBg').classList.add('open')});
+$('bellBtn').addEventListener('click',function(){unlockAudio();if('Notification' in window&&Notification.permission==='granted'){toast('Notifications are on')}else{$('setBtn').click()}});
+$('setClose').addEventListener('click',function(){$('setBg').classList.remove('open')});
+$('setBg').addEventListener('click',function(e){if(e.target===$('setBg'))$('setBg').classList.remove('open')});
+$('permBtn').addEventListener('click',function(){unlockAudio();askPermission()});
+$('testBtn').addEventListener('click',function(){
+  unlockAudio();
+  $('alSubject').textContent='Test alarm';$('alMsg').textContent='This is how your reminder sounds';$('alTime').textContent='';
+  $('alarm').classList.add('open');startAlarm('start');
+  showNotification('Test alarm','Reminders are working','test',false);
+});
+$('leadIn').addEventListener('change',function(){
+  var v=parseInt($('leadIn').value,10);if(isNaN(v)||v<0)v=0;if(v>120)v=120;
+  settings.lead=v;$('leadIn').value=v;store('st_settings',settings);toast(v?'Early reminder: '+v+' min':'Early reminder off');
+});
+$('icsBtn').addEventListener('click',exportICS);
+$('clearBtn').addEventListener('click',function(){
+  if(!confirm('Delete all subjects? This cannot be undone.'))return;
+  sessions=[];fired={};save();store('st_fired',fired);render();toast('Cleared');
+});
+$('alStop').addEventListener('click',stopAlarm);
+document.addEventListener('touchstart',unlockAudio,{passive:true});
+document.addEventListener('click',unlockAudio);
+document.addEventListener('visibilitychange',function(){if(!document.hidden){tick();render()}});
+
+/* ---------- start ---------- */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(function(){return navigator.serviceWorker.ready}).then(function(r){swReg=r}).catch(function(){});
+}
+render();tick();
+setInterval(tick,10000);
+setInterval(function(){renderList()},60000);
+})();
+</script>
+</body>
+</html>
